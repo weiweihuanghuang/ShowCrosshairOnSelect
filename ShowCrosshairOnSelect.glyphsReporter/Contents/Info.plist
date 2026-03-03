@@ -16,12 +16,6 @@
 	<string>3.0.11</string>
 	<key>CFBundleVersion</key>
 	<string>30</string>
-	<key>UpdateFeedURL</key>
-	<string>https://raw.githubusercontent.com/weiweihuanghuang/ShowCrosshairOnSelect/master/ShowCrosshairOnSelect.glyphsReporter/Contents/Info.plist</string>
-	<key>productPageURL</key>
-	<string>https://github.com/weiweihuanghuang/ShowCrosshairOnSelect</string>
-	<key>productReleaseNotes</key>
-	<string>update plugin to only show crosshair on selection</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright, Rainer Erich Scheichelbauer, 2018</string>
 	<key>NSPrincipalClass</key>
