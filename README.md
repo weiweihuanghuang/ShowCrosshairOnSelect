@@ -31,10 +31,6 @@ Change the value (18.0 in this example) to the desired point size.
 2. Use *View > Show Crosshair On Select* to toggle the display of the crosshair.
 3. Access options (see above) in the context menu.
 
-### Requirements
-
-The plugin needs Glyphs 2.4 or higher, running on OS X 10.9 or later. It does NOT work with Glyphs 1.x.
-
 ### License
 
 Copyright 2015–2019 Rainer Erich Scheichelbauer (@mekkablue).

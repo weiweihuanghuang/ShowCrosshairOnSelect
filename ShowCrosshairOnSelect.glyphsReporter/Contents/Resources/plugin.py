@@ -320,7 +320,7 @@ class ShowCrosshairOnSelect(BaseReporterPlugin):
 		)
 		textAlignment = 0  # top left: 6, top center: 7, top right: 8, center left: 3, center center: 4, center right: 5, bottom left: 0, bottom center: 1, bottom right: 2
 		#font = layer.parent.parent
-		lowerLeftCorner = self.controller.viewPort.origin
+		lowerLeftCorner = NSPoint(self.controller.viewPort.origin.x, self.controller.viewPort.origin.y + 18)
 		displayText.drawAtPoint_alignment_(lowerLeftCorner, textAlignment)
 
 	@objc.python_method
