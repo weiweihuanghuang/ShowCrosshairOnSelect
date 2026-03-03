@@ -77,7 +77,7 @@ class ShowCrosshairOnSelect(ReporterPlugin):
 
 	@objc.python_method
 	def foreground(self, layer):
-		toolEventHandler = self.controller.view().window().windowController().toolEventHandler()
+		toolEventHandler = self.controller.windowController().toolEventHandler()
 		# toolIsDragging = toolEventHandler.dragging()
 		toolIsTextTool = toolEventHandler.className() == "GlyphsToolText"
 		toolIsToolHand = toolEventHandler.className() == "GlyphsToolHand"
@@ -188,7 +188,7 @@ class ShowCrosshairOnSelect(ReporterPlugin):
 
 	@objc.python_method
 	def background(self, layer):
-		toolEventHandler = self.controller.view().window().windowController().toolEventHandler()
+		toolEventHandler = self.controller.windowController().toolEventHandler()
 		# toolIsDragging = toolEventHandler.dragging()
 		toolIsTextTool = toolEventHandler.className() == "GlyphsToolText"
 		toolIsToolHand = toolEventHandler.className() == "GlyphsToolHand"
@@ -245,7 +245,7 @@ class ShowCrosshairOnSelect(ReporterPlugin):
 
 	@objc.python_method
 	def foregroundInViewCoords(self, layer=None):
-		toolEventHandler = self.controller.view().window().windowController().toolEventHandler()
+		toolEventHandler = self.controller.windowController().toolEventHandler()
 		toolIsTextTool = toolEventHandler.className() == "GlyphsToolText"
 		toolIsToolHand = toolEventHandler.className() == "GlyphsToolHand"
 
