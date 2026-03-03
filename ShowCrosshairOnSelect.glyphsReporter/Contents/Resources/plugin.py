@@ -76,27 +76,16 @@ class ShowCrosshairOnSelect(ReporterPlugin):
 		circle.fill()
 
 	@objc.python_method
-	def foreground(self, layer):
-		toolEventHandler = self.controller.windowController().toolEventHandler()
-		# toolIsDragging = toolEventHandler.dragging()
-		toolIsTextTool = toolEventHandler.className() == "GlyphsToolText"
-		toolIsToolHand = toolEventHandler.className() == "GlyphsToolHand"
-		if any([toolIsTextTool, toolIsToolHand]):
-			return
+	def drawThickness(self, layer, selectionPosition):
 
-		selectionPosition = self.selectionPosition(layer)
-		if selectionPosition is None:
+		if layer is None:
 			return
-
-		if not Glyphs.boolDefaults["com.wwwhhhhh.ShowCrosshairOnSelect.showThickness"]:
-			return
-
-		font = Glyphs.font
+		font = layer.font()
 		master = layer.associatedFontMaster()
 		scale = self.getScale()
 
 		# intersection markers:
-		handleSize = self.getHandleSize() * scale**-0.7
+		handleSize = self.getHandleSize()
 		try:
 			NSColor.separatorColor().set()
 		except:
@@ -142,20 +131,26 @@ class ShowCrosshairOnSelect(ReporterPlugin):
 		# set font attributes
 		fontSize = Glyphs.defaults["com.wwwhhhhh.ShowCrosshairOnSelect.fontSize"]
 		thicknessFontAttributes = {
-			NSFontAttributeName: NSFont.monospacedDigitSystemFontOfSize_weight_(fontSize / scale, 0.0),
+			NSFontAttributeName: NSFont.monospacedDigitSystemFontOfSize_weight_(fontSize, 0.0),
 			NSForegroundColorAttributeName: NSColor.textColor()
 		}
 
+		layerOrigin = self.controller.selectedLayerOrigin
+		print("__layerOrigin", layerOrigin)
 		# number badges on vertical slice:
 		for key in ys:
 			item = ys[key]
 			item = round(item, 1)
 			if item != 0:
 				x, y = sliceX, key
+				x *= scale
+				y *= scale
+				x += layerOrigin.x
+				y += layerOrigin.y
 				# adjust x for italic angle if necessary:
 				if italicAngle:
 					x = self.italicize(NSPoint(x, y), italicAngle=italicAngle, pivotalY=sliceY).x
-				self.drawThicknessBadge(scale, fontSize, x, y, item)
+				self.drawThicknessBadge(fontSize, x, y, item)
 				self.drawThicknessText(thicknessFontAttributes, x, y, item)
 
 		# number badges on horizontal slice:
@@ -164,7 +159,11 @@ class ShowCrosshairOnSelect(ReporterPlugin):
 			item = round(item, 1)
 			if item != 0:
 				x, y = key, sliceY
-				self.drawThicknessBadge(scale, fontSize, x, y, item)
+				x *= scale
+				y *= scale
+				x += layerOrigin.x
+				y += layerOrigin.y
+				self.drawThicknessBadge(fontSize, x, y, item)
 				self.drawThicknessText(thicknessFontAttributes, x, y, item)
 
 	@objc.python_method
@@ -244,7 +243,7 @@ class ShowCrosshairOnSelect(ReporterPlugin):
 			return None
 
 	@objc.python_method
-	def foregroundInViewCoords(self, layer=None):
+	def foregroundInViewCoords(self):
 		toolEventHandler = self.controller.windowController().toolEventHandler()
 		toolIsTextTool = toolEventHandler.className() == "GlyphsToolText"
 		toolIsToolHand = toolEventHandler.className() == "GlyphsToolHand"
@@ -260,8 +259,14 @@ class ShowCrosshairOnSelect(ReporterPlugin):
 		if selectionPosition is None:
 			return
 
-		if not Glyphs.boolDefaults["com.wwwhhhhh.ShowCrosshairOnSelect.showCoordinates"]:
-			return
+		if Glyphs.boolDefaults["com.wwwhhhhh.ShowCrosshairOnSelect.showCoordinates"]:
+			self.drawCoordinates(selectionPosition)
+
+		if Glyphs.boolDefaults["com.wwwhhhhh.ShowCrosshairOnSelect.showThickness"]:
+			self.drawThickness(activeLayer, selectionPosition)
+
+	@objc.python_method
+	def drawCoordinates(self, selectionPosition):
 
 		coordinateText = "%4d, %4d" % (
 			round(selectionPosition.x),
@@ -284,9 +289,9 @@ class ShowCrosshairOnSelect(ReporterPlugin):
 		displayText.drawAtPoint_alignment_(lowerLeftCorner, textAlignment)
 
 	@objc.python_method
-	def drawThicknessBadge(self, scale, fontSize, x, y, value):
-		width = len(str(value)) * fontSize * 0.7 / scale
-		rim = fontSize * 0.3 / scale
+	def drawThicknessBadge(self, fontSize, x, y, value):
+		width = len(str(value)) * fontSize * 0.7
+		rim = fontSize * 0.3
 		badge = NSMakeRect(x - width / 2, y - fontSize / 2 - rim, width, fontSize + rim * 2)
 		NSColor.textBackgroundColor().set()
 		NSBezierPath.bezierPathWithRoundedRect_xRadius_yRadius_(badge, fontSize * 0.5, fontSize * 0.5).fill()
