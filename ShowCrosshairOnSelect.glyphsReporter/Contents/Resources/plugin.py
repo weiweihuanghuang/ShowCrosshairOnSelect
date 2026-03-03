@@ -12,18 +12,18 @@ from __future__ import division, print_function, unicode_literals
 
 import objc
 from GlyphsApp import Glyphs
-from GlyphsApp.plugins import ReporterPlugin
+from GlyphsApp.plugins import BaseReporterPlugin, setUpMenuHelper, LogError
 from math import radians, tan
-from Cocoa import NSBezierPath, NSColor, NSFont, NSAttributedString, NSMakeRect, NSPoint, NSFontAttributeName, NSForegroundColorAttributeName
+from Cocoa import NSBezierPath, NSColor, NSFont, NSAttributedString, NSUserDefaults, NSMakeRect, NSPoint, NSFontAttributeName, NSForegroundColorAttributeName
+import traceback
 
+class ShowCrosshairOnSelect(BaseReporterPlugin):
 
-class ShowCrosshairOnSelect(ReporterPlugin):
-
-	@objc.python_method
-	def settings(self):
-		self.menuName = Glyphs.localize({
-			'en': u'Crosshair On Select',
-		})
+	def init(self):
+		"""
+		Put any initializations you want to make here.
+		"""
+		self = objc.super(BaseReporterPlugin, self).init()
 
 		# Glyphs.registerDefault("com.wwwhhhhh.ShowCrosshairOnSelect.universalCrosshair", 1)
 		Glyphs.registerDefault("com.wwwhhhhh.ShowCrosshairOnSelect.showCoordinates", 0)
@@ -32,6 +32,31 @@ class ShowCrosshairOnSelect(ReporterPlugin):
 		Glyphs.registerDefault("com.wwwhhhhh.ShowCrosshairOnSelect.ignoreItalicAngle", 0)
 
 		self.generalContextMenus = self.buildContextMenus()
+
+		return self
+
+	def interfaceVersion(self):
+		"""
+		Distinguishes the API version the plugin was built for.
+		Return 1.
+		"""
+		return 1
+
+	def title(self):
+		return Glyphs.localize({
+			'en': u'Crosshair On Select',
+		})
+
+	def addMenuItemsForEvent_toMenu_(self, event, contextMenu):
+		'''
+		The event can tell you where the user had clicked.
+		'''
+		try:
+			if self.generalContextMenus:
+				setUpMenuHelper(contextMenu, self.generalContextMenus, self)
+
+		except:
+			LogError(traceback.format_exc())
 
 	@objc.python_method
 	def buildContextMenus(self, sender=None):
@@ -76,13 +101,12 @@ class ShowCrosshairOnSelect(ReporterPlugin):
 		circle.fill()
 
 	@objc.python_method
-	def drawThickness(self, layer, selectionPosition):
+	def drawThickness(self, layer, selectionPosition, scale):
 
 		if layer is None:
 			return
 		font = layer.font()
 		master = layer.associatedFontMaster()
-		scale = self.getScale()
 
 		# intersection markers:
 		handleSize = self.getHandleSize()
@@ -136,7 +160,6 @@ class ShowCrosshairOnSelect(ReporterPlugin):
 		}
 
 		layerOrigin = self.controller.selectedLayerOrigin
-		print("__layerOrigin", layerOrigin)
 		# number badges on vertical slice:
 		for key in ys:
 			item = ys[key]
@@ -185,13 +208,17 @@ class ShowCrosshairOnSelect(ReporterPlugin):
 			x += horizontalDeviance  # x of point that is yOffset from pivotal point
 			return NSPoint(x, thisPoint.y)
 
-	@objc.python_method
-	def background(self, layer):
+	def drawBackgroundWithOptions_(self, options):
+		#def background(self, layer):
 		toolEventHandler = self.controller.windowController().toolEventHandler()
 		# toolIsDragging = toolEventHandler.dragging()
 		toolIsTextTool = toolEventHandler.className() == "GlyphsToolText"
 		toolIsToolHand = toolEventHandler.className() == "GlyphsToolHand"
 		if any([toolIsTextTool, toolIsToolHand]):
+			return
+
+		layer = self.controller.activeLayer()
+		if layer is None:
 			return
 
 		crossHairCenter = self.selectionPosition(layer)
@@ -206,11 +233,19 @@ class ShowCrosshairOnSelect(ReporterPlugin):
 		except:
 			pass
 
+		scale = options["Scale"]
+		layerOrigin = self.controller.selectedLayerOrigin
 		# set up bezierpath:
 		offset = 1000000
 		NSColor.disabledControlTextColor().set()  # subtle grey
 		crosshairPath = NSBezierPath.bezierPath()
-		crosshairPath.setLineWidth_(0.75 / self.getScale())
+		crosshairPath.setLineWidth_(0.75)
+
+		crossHairCenter.x *= scale
+		crossHairCenter.y *= scale
+
+		crossHairCenter.x += layerOrigin.x
+		crossHairCenter.y += layerOrigin.y
 
 		# vertical line:
 		crosshairPath.moveToPoint_(self.italicize(NSPoint(crossHairCenter.x, -offset), italicAngle=italicAngle, pivotalY=crossHairCenter.y))
@@ -242,8 +277,7 @@ class ShowCrosshairOnSelect(ReporterPlugin):
 		except:
 			return None
 
-	@objc.python_method
-	def foregroundInViewCoords(self):
+	def drawForegroundWithOptions_(self, options):
 		toolEventHandler = self.controller.windowController().toolEventHandler()
 		toolIsTextTool = toolEventHandler.className() == "GlyphsToolText"
 		toolIsToolHand = toolEventHandler.className() == "GlyphsToolHand"
@@ -263,7 +297,8 @@ class ShowCrosshairOnSelect(ReporterPlugin):
 			self.drawCoordinates(selectionPosition)
 
 		if Glyphs.boolDefaults["com.wwwhhhhh.ShowCrosshairOnSelect.showThickness"]:
-			self.drawThickness(activeLayer, selectionPosition)
+			scale = options["Scale"]
+			self.drawThickness(activeLayer, selectionPosition, scale)
 
 	@objc.python_method
 	def drawCoordinates(self, selectionPosition):
@@ -316,6 +351,7 @@ class ShowCrosshairOnSelect(ReporterPlugin):
 		oldSetting = Glyphs.boolDefaults[pref]
 		Glyphs.defaults[pref] = int(not oldSetting)
 		self.generalContextMenus = self.buildContextMenus()
+		self.controller.redraw()
 
 	# def addMenuItemsForEvent_toMenu_(self, event, contextMenu):
 	# 	'''
@@ -336,6 +372,34 @@ class ShowCrosshairOnSelect(ReporterPlugin):
 	# 	except:
 	# 		import traceback
 	# 		NSLog(traceback.format_exc())
+	@objc.python_method
+	def getHandleSize(self):
+		"""
+		Returns the current handle size as set in user preferences.
+		Use: self.getHandleSize() / self.getScale()
+		to determine the right size for drawing on the canvas.
+		"""
+		try:
+			selected = NSUserDefaults.standardUserDefaults().integerForKey_("GSHandleSize")
+			if selected == 0:
+				return 5.0
+			elif selected == 2:
+				return 10.0
+			else:
+				return 7.0  # Regular
+		except:
+			LogError(traceback.format_exc())
+			return 7.0
+
+	@objc.typedSelector(b'v@:@')
+	def setController_(self, controller):
+		"""
+		Use self.controller as object for the current view controller.
+		"""
+		try:
+			self.controller = controller
+		except:
+			LogError(traceback.format_exc())
 
 	@objc.python_method
 	def __file__(self):
