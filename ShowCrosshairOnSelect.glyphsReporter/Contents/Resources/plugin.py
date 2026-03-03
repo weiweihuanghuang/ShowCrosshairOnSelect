@@ -81,85 +81,91 @@ class ShowCrosshairOnSelect(ReporterPlugin):
 		# toolIsDragging = toolEventHandler.dragging()
 		toolIsTextTool = toolEventHandler.className() == "GlyphsToolText"
 		toolIsToolHand = toolEventHandler.className() == "GlyphsToolHand"
+		if any([toolIsTextTool, toolIsToolHand]):
+			return
+
 		selectionPosition = self.selectionPosition(layer)
-		shouldDisplay = not any([toolIsTextTool, toolIsToolHand]) and selectionPosition != None
+		if selectionPosition is None:
+			return
 
-		if Glyphs.boolDefaults["com.wwwhhhhh.ShowCrosshairOnSelect.showThickness"] and shouldDisplay:
-			font = Glyphs.font
-			master = layer.associatedFontMaster()
-			scale = self.getScale()
+		if not Glyphs.boolDefaults["com.wwwhhhhh.ShowCrosshairOnSelect.showThickness"]:
+			return
 
-			# intersection markers:
-			handleSize = self.getHandleSize() * scale**-0.7
-			try:
-				NSColor.separatorColor().set()
-			except:
-				NSColor.systemGrayColor().set()  # pre 10.14
+		font = Glyphs.font
+		master = layer.associatedFontMaster()
+		scale = self.getScale()
 
-			# stem thickness horizontal slice
-			sliceY = selectionPosition.y
-			minX = -1000 * (font.upm / 1000.0)
-			maxX = layer.width + 1000 * (font.upm / 1000.0)
-			prev = minX
-			xs = {}
-			intersections = layer.calculateIntersectionsStartPoint_endPoint_decompose_(
-				(minX, sliceY),
-				(maxX, sliceY),
-				True,
-			)
-			for inter in intersections[1:-1]:
-				self.drawCircle(inter, handleSize)
-				if prev != minX:
-					xs[(inter.x - prev) / 2 + prev] = inter.x - prev
-				prev = inter.x
+		# intersection markers:
+		handleSize = self.getHandleSize() * scale**-0.7
+		try:
+			NSColor.separatorColor().set()
+		except:
+			NSColor.systemGrayColor().set()  # pre 10.14
 
-			# stem thickness vertical slice
-			sliceX = selectionPosition.x
-			minY = master.descender - 1000 * (font.upm / 1000.0)
-			maxY = master.ascender + 1000 * (font.upm / 1000.0)
-			prev = minY
-			ys = {}
+		# stem thickness horizontal slice
+		sliceY = selectionPosition.y
+		minX = -1000 * (font.upm / 1000.0)
+		maxX = layer.width + 1000 * (font.upm / 1000.0)
+		prev = minX
+		xs = {}
+		intersections = layer.calculateIntersectionsStartPoint_endPoint_decompose_(
+			(minX, sliceY),
+			(maxX, sliceY),
+			True,
+		)
+		for inter in intersections[1:-1]:
+			self.drawCircle(inter, handleSize)
+			if prev != minX:
+				xs[(inter.x - prev) / 2 + prev] = inter.x - prev
+			prev = inter.x
 
-			italicAngle = master.italicAngle
+		# stem thickness vertical slice
+		sliceX = selectionPosition.x
+		minY = master.descender - 1000 * (font.upm / 1000.0)
+		maxY = master.ascender + 1000 * (font.upm / 1000.0)
+		prev = minY
+		ys = {}
 
-			verticalIntersections = layer.calculateIntersectionsStartPoint_endPoint_decompose_(
-				self.italicize(NSPoint(sliceX, minY), italicAngle=italicAngle, pivotalY=sliceY),
-				self.italicize(NSPoint(sliceX, maxY), italicAngle=italicAngle, pivotalY=sliceY),
-				True,
-			)
-			for inter in verticalIntersections[1:-1]:
-				self.drawCircle(inter, handleSize)
-				if prev != minY:
-					ys[(inter.y - prev) / 2 + prev] = inter.y - prev
-				prev = inter.y
+		italicAngle = master.italicAngle
 
-			# set font attributes
-			fontSize = Glyphs.defaults["com.wwwhhhhh.ShowCrosshairOnSelect.fontSize"]
-			thicknessFontAttributes = {
-				NSFontAttributeName: NSFont.monospacedDigitSystemFontOfSize_weight_(fontSize / scale, 0.0),
-				NSForegroundColorAttributeName: NSColor.textColor()
-			}
+		verticalIntersections = layer.calculateIntersectionsStartPoint_endPoint_decompose_(
+			self.italicize(NSPoint(sliceX, minY), italicAngle=italicAngle, pivotalY=sliceY),
+			self.italicize(NSPoint(sliceX, maxY), italicAngle=italicAngle, pivotalY=sliceY),
+			True,
+		)
+		for inter in verticalIntersections[1:-1]:
+			self.drawCircle(inter, handleSize)
+			if prev != minY:
+				ys[(inter.y - prev) / 2 + prev] = inter.y - prev
+			prev = inter.y
 
-			# number badges on vertical slice:
-			for key in ys:
-				item = ys[key]
-				item = round(item, 1)
-				if item != 0:
-					x, y = sliceX, key
-					# adjust x for italic angle if necessary:
-					if italicAngle:
-						x = self.italicize(NSPoint(x, y), italicAngle=italicAngle, pivotalY=sliceY).x
-					self.drawThicknessBadge(scale, fontSize, x, y, item)
-					self.drawThicknessText(thicknessFontAttributes, x, y, item)
+		# set font attributes
+		fontSize = Glyphs.defaults["com.wwwhhhhh.ShowCrosshairOnSelect.fontSize"]
+		thicknessFontAttributes = {
+			NSFontAttributeName: NSFont.monospacedDigitSystemFontOfSize_weight_(fontSize / scale, 0.0),
+			NSForegroundColorAttributeName: NSColor.textColor()
+		}
 
-			# number badges on horizontal slice:
-			for key in xs:
-				item = xs[key]
-				item = round(item, 1)
-				if item != 0:
-					x, y = key, sliceY
-					self.drawThicknessBadge(scale, fontSize, x, y, item)
-					self.drawThicknessText(thicknessFontAttributes, x, y, item)
+		# number badges on vertical slice:
+		for key in ys:
+			item = ys[key]
+			item = round(item, 1)
+			if item != 0:
+				x, y = sliceX, key
+				# adjust x for italic angle if necessary:
+				if italicAngle:
+					x = self.italicize(NSPoint(x, y), italicAngle=italicAngle, pivotalY=sliceY).x
+				self.drawThicknessBadge(scale, fontSize, x, y, item)
+				self.drawThicknessText(thicknessFontAttributes, x, y, item)
+
+		# number badges on horizontal slice:
+		for key in xs:
+			item = xs[key]
+			item = round(item, 1)
+			if item != 0:
+				x, y = key, sliceY
+				self.drawThicknessBadge(scale, fontSize, x, y, item)
+				self.drawThicknessText(thicknessFontAttributes, x, y, item)
 
 	@objc.python_method
 	def italicize(self, thisPoint, italicAngle=0.0, pivotalY=0.0):
@@ -186,41 +192,44 @@ class ShowCrosshairOnSelect(ReporterPlugin):
 		# toolIsDragging = toolEventHandler.dragging()
 		toolIsTextTool = toolEventHandler.className() == "GlyphsToolText"
 		toolIsToolHand = toolEventHandler.className() == "GlyphsToolHand"
+		if any([toolIsTextTool, toolIsToolHand]):
+			return
 
 		crossHairCenter = self.selectionPosition(layer)
-		shouldDisplay = not any([toolIsTextTool, toolIsToolHand]) and crossHairCenter != None
+		if crossHairCenter is None:
+			return
 
-		if shouldDisplay:
-			# determine italic angle:
-			italicAngle = 0.0
-			try:
-				thisMaster = layer.associatedFontMaster()
-				italicAngle = thisMaster.italicAngle
-			except:
-				pass
+		# determine italic angle:
+		italicAngle = 0.0
+		try:
+			thisMaster = layer.associatedFontMaster()
+			italicAngle = thisMaster.italicAngle
+		except:
+			pass
 
-			# set up bezierpath:
-			offset = 1000000
-			NSColor.disabledControlTextColor().set()  # subtle grey
-			crosshairPath = NSBezierPath.bezierPath()
-			crosshairPath.setLineWidth_(0.75 / self.getScale())
+		# set up bezierpath:
+		offset = 1000000
+		NSColor.disabledControlTextColor().set()  # subtle grey
+		crosshairPath = NSBezierPath.bezierPath()
+		crosshairPath.setLineWidth_(0.75 / self.getScale())
 
-			# vertical line:
-			crosshairPath.moveToPoint_(self.italicize(NSPoint(crossHairCenter.x, -offset), italicAngle=italicAngle, pivotalY=crossHairCenter.y))
-			crosshairPath.lineToPoint_(self.italicize(NSPoint(crossHairCenter.x, +offset), italicAngle=italicAngle, pivotalY=crossHairCenter.y))
+		# vertical line:
+		crosshairPath.moveToPoint_(self.italicize(NSPoint(crossHairCenter.x, -offset), italicAngle=italicAngle, pivotalY=crossHairCenter.y))
+		crosshairPath.lineToPoint_(self.italicize(NSPoint(crossHairCenter.x, +offset), italicAngle=italicAngle, pivotalY=crossHairCenter.y))
 
-			# horizontal line:
-			crosshairPath.moveToPoint_(NSPoint(-offset, crossHairCenter.y))
-			crosshairPath.lineToPoint_(NSPoint(+offset, crossHairCenter.y))
+		# horizontal line:
+		crosshairPath.moveToPoint_(NSPoint(-offset, crossHairCenter.y))
+		crosshairPath.lineToPoint_(NSPoint(+offset, crossHairCenter.y))
 
-			# set colour
-			selectionColor = 0, 0.5, 0, 0.4
-			NSColor.colorWithCalibratedRed_green_blue_alpha_(*selectionColor).set()
+		# set colour
+		selectionColor = 0, 0.5, 0, 0.4
+		NSColor.colorWithCalibratedRed_green_blue_alpha_(*selectionColor).set()
 
-			# execute stroke:
-			crosshairPath.stroke()
+		# execute stroke:
+		crosshairPath.stroke()
 
-	def selectionPosition(self, layer=None):
+	@objc.python_method
+	def selectionPosition(self, layer):
 		# view = self.controller.graphicView()
 		# selectionPosition = view.getActiveLocation_(Glyphs.currentEvent())
 		try:
@@ -240,32 +249,39 @@ class ShowCrosshairOnSelect(ReporterPlugin):
 		toolIsTextTool = toolEventHandler.className() == "GlyphsToolText"
 		toolIsToolHand = toolEventHandler.className() == "GlyphsToolHand"
 
-		selectedLayers = Glyphs.font.selectedLayers
-		if selectedLayers:
-			selectionPosition = self.selectionPosition(selectedLayers[0])
+		if any([toolIsTextTool, toolIsToolHand]):
+			return
 
-			shouldDisplay = not any([toolIsTextTool, toolIsToolHand]) and selectionPosition != None
+		activeLayer = self.controller.activeLayer()
+		if activeLayer is None:
+			return
 
-			if Glyphs.boolDefaults["com.wwwhhhhh.ShowCrosshairOnSelect.showCoordinates"] and shouldDisplay:
-				coordinateText = "%4d, %4d" % (
-					round(selectionPosition.x),
-					round(selectionPosition.y)
-				)
+		selectionPosition = self.selectionPosition(activeLayer)
+		if selectionPosition is None:
+			return
 
-				fontSize = Glyphs.defaults["com.wwwhhhhh.ShowCrosshairOnSelect.fontSize"]
-				fontAttributes = {
-					#NSFontAttributeName: NSFont.labelFontOfSize_(10.0),
-					NSFontAttributeName: NSFont.monospacedDigitSystemFontOfSize_weight_(fontSize, 0.0),
-					NSForegroundColorAttributeName: NSColor.textColor()
-				}
-				displayText = NSAttributedString.alloc().initWithString_attributes_(
-					coordinateText,
-					fontAttributes
-				)
-				textAlignment = 0  # top left: 6, top center: 7, top right: 8, center left: 3, center center: 4, center right: 5, bottom left: 0, bottom center: 1, bottom right: 2
-				#font = layer.parent.parent
-				lowerLeftCorner = self.controller.viewPort.origin
-				displayText.drawAtPoint_alignment_(lowerLeftCorner, textAlignment)
+		if not Glyphs.boolDefaults["com.wwwhhhhh.ShowCrosshairOnSelect.showCoordinates"]:
+			return
+
+		coordinateText = "%4d, %4d" % (
+			round(selectionPosition.x),
+			round(selectionPosition.y)
+		)
+
+		fontSize = Glyphs.defaults["com.wwwhhhhh.ShowCrosshairOnSelect.fontSize"]
+		fontAttributes = {
+			#NSFontAttributeName: NSFont.labelFontOfSize_(10.0),
+			NSFontAttributeName: NSFont.monospacedDigitSystemFontOfSize_weight_(fontSize, 0.0),
+			NSForegroundColorAttributeName: NSColor.textColor()
+		}
+		displayText = NSAttributedString.alloc().initWithString_attributes_(
+			coordinateText,
+			fontAttributes
+		)
+		textAlignment = 0  # top left: 6, top center: 7, top right: 8, center left: 3, center center: 4, center right: 5, bottom left: 0, bottom center: 1, bottom right: 2
+		#font = layer.parent.parent
+		lowerLeftCorner = self.controller.viewPort.origin
+		displayText.drawAtPoint_alignment_(lowerLeftCorner, textAlignment)
 
 	@objc.python_method
 	def drawThicknessBadge(self, scale, fontSize, x, y, value):
@@ -282,21 +298,6 @@ class ShowCrosshairOnSelect(ReporterPlugin):
 			thicknessFontAttributes
 		)
 		displayText.drawAtPoint_alignment_(NSPoint(x, y), 4)
-
-	def mouseDidMove_(self, notification):
-		if hasattr(self, 'controller') and self.controller:
-			self.controller.redraw()
-		else:
-			Glyphs.redraw()
-
-	def willActivate(self):
-		Glyphs.addCallback(self.mouseDidMove_, MOUSEMOVED)
-
-	def willDeactivate(self):
-		Glyphs.removeCallback(self.mouseDidMove_, MOUSEMOVED)
-
-	# def toggleUniversalCrosshair(self):
-	# 	self.toggleSetting("universalCrosshair")
 
 	def toggleShowCoordinates(self):
 		self.toggleSetting("showCoordinates")
