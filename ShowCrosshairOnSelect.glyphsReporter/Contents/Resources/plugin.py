@@ -38,27 +38,27 @@ class ShowCrosshairOnSelect(ReporterPlugin):
 		return [
 			{
 				'name': Glyphs.localize({
-					'en': u"Crosshair On Select Options:",
+					'en': "Crosshair On Select Options:",
 				}),
 				'action': None,
 			},
 			# {
 			# 	'name': Glyphs.localize({
-			# 		'en': u"Always Show Crosshair",
+			# 		'en': "Always Show Crosshair",
 			# 		}),
 			# 	'action': self.toggleUniversalCrosshair,
 			# 	'state': Glyphs.defaults["com.wwwhhhhh.ShowCrosshairOnSelect.universalCrosshair"],
 			# },
 			{
 				'name': Glyphs.localize({
-					'en': u"Show Coordinates",
+					'en': "Show Coordinates",
 				}),
 				'action': self.toggleShowCoordinates,
 				'state': Glyphs.defaults["com.wwwhhhhh.ShowCrosshairOnSelect.showCoordinates"],
 			},
 			{
 				'name': Glyphs.localize({
-					'en': u"Show Thicknesses",
+					'en': "Show Thicknesses",
 				}),
 				'action': self.toggleShowThickness,
 				'state': Glyphs.defaults["com.wwwhhhhh.ShowCrosshairOnSelect.showThickness"],
