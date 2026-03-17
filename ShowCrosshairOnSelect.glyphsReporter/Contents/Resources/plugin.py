@@ -255,8 +255,11 @@ class ShowCrosshairOnSelect(BaseReporterPlugin):
 		crosshairPath.moveToPoint_(NSPoint(-offset, crossHairCenter.y))
 		crosshairPath.lineToPoint_(NSPoint(+offset, crossHairCenter.y))
 
-		# set colour
-		selectionColor = 0, 0.5, 0, 0.4
+		# set colour based on dark mode
+		if self.controller.graphicView().drawDark():
+		    selectionColor = 0.3, 1.0, 0.3, 0.5  # brighter green for dark mode
+		else:
+		    selectionColor = 0, 0.5, 0, 0.4  # original green for light mode
 		NSColor.colorWithCalibratedRed_green_blue_alpha_(*selectionColor).set()
 
 		# execute stroke:
